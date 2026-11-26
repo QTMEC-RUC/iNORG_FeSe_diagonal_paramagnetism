@@ -1,0 +1,38 @@
+solver         =  'NORG'   # impurity solver
+DCs            =  'exact'   # exact double-counting with dielectric constant approx.
+
+max_dmft_iterations = 1     # number of iteration of the dmft-loop only
+max_lda_iterations  = 1   # number of iteration of the LDA-loop only
+finish         = 1         # number of iterations of full charge loop (1 = no charge self-consistency). You should probably use 30 or so, but for testing 10 is OK.
+
+ntail          =  300       # on imaginary axis, number of points in the tail of the logarithmic mesh
+
+cc             =  5e-6      # the charge density precision to stop the LDA+DMFT run
+ec             =  5e-6      # the energy precision to stop the LDA+DMFT run
+recomputeEF    =  1         # Recompute EF in dmft2 step. If recomputeEF = 0, it fixed the chemical potential. Good for insulators
+
+# Impurity problem number 0
+iparams0={"exe"                : ["FeSe_diagonal_paramagnetism"              , "# Name of the executable"],
+          "U"                  : [5.0                  , "# Coulomb repulsion (F0)"],
+          "J"                  : [0.8                 , "# Coulomb repulsion (F0)"],
+          "CoulombF"           : ["'Ising'"            , "# Form of Coulomb repulsion. 'Full' allows rotational invariant form of C.I."],
+          "nom"                  : [120                  , "# number of Matsubara points"],
+          "beta"               : [100                  , "# Inverse temperature T=300K"],
+          "nf0"                : [6.0                   , "# Nominal occupancy nd for double-counting"],
+          "Minsulator"         : [1                     , "# check if Mott insulator"],
+          "ful_pcl_sch"        : [1                     , "# check if using full space search"],
+          "NOOC"               : ["phss_v2"             , "# norg type"],
+          "weight_nooc"        : [[-1E-0, -1E-0, -1E-0, -1E-0, -1E-0] , "# norg type"],
+          "weight_freze"       : [[-1E-7, -1E-7, -1E-7, -1E-7, -1E-7] , "# norg type"],
+          "fit_points"         : [[0, 1, 2, 3, 4, 5, 7, 9, 13, 18, 25, 33, 63, 94, 157, 226, 361] , "# dlr = DLRGrid(Euv=10.00000000001, beta=40.00000000001, rtol=1e-6, isFermi=true); println(dlr.n[dlr.n .>= 0])"],
+          "restrain"           : [[0, -1, -3, -4, -5, 0, 5, 4, 3, 1]          , "# norg restration"],
+          "restrain_autonooc"         : [2                     , "# restrain autonooc"],
+          "restrain_tight_divs" : [[0, -1, -3, -4, -5, 0, 5, 4, 3, 1]     , "# restrain_tight_divs"],
+          "fit_nbaths"         : [[6,6,6,6,6,6,6,6,6,6]       , "# norg distribution"],
+          "or_deg_adaptive"    : [[1,1,2,2,3,3,4,4,5,5]                                     , "# orbital degeneracy labels for adaptive scheme"],
+          "cix_map" :[[1,1,[1,2]]            , "# cal n_init"],
+          "if_n_init" : [1                                     , "# Use n_init or not"],
+          "fix_start_search_N_subspace" :[[4, 4, 4, 4, 4, 4, 4, 4, 4, 4]                                     , "# fix_start_search_N_subspace"],
+          "if_fix_N_subspace" : [0                                     , "# if_fix_N_subspace"],
+          "fix_N_subspace": [1,[[[4, 4, 4, 4, 4, 4, 4, 4, 4, 4],[0, -1, -3, -4, -5, 0, 5, 4, 3, 1],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0],[1, 0, 0, 0, 3, 1, 2, 0, 0, 0]]]                                     , "# [degeneracy, subspaces]; each subspace is [npartical, control_divs rows...]"],
+          }
