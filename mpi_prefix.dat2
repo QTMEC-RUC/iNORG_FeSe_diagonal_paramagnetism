@@ -1,0 +1,1 @@
+"${EDMFT_MPI_WRAPPER:?Set EDMFT_MPI_WRAPPER in the batch environment}" dmft
