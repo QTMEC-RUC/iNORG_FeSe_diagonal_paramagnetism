@@ -1,0 +1,99 @@
+#!/bin/bash
+#SBATCH -J FeSe
+#SBATCH -p batch
+#SBATCH -N 2
+#SBATCH --reservation=yc_reservation
+#SBATCH --ntasks=2
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=64
+#SBATCH --hint=nomultithread
+#SBATCH -o out.%j
+#SBATCH -e err.%j
+#SBATCH --time=48:00:00
+
+
+module load intel/oneapi-2022 || exit 2
+module load oneapi-2022/fftw-3.3.10 || exit 2
+module load oneapi-2022/mpich-4.2.0 || exit 2
+module load oneapi-2022/libxc-5.1.0 || exit 2
+
+# Preserve the validated module library search path across Python/Hydra/Slurm.
+export EDMFT_RUNTIME_LIBRARY_PATH="${LD_LIBRARY_PATH:?Module library path is empty}"
+export SLURM_EXPORT_ENV=ALL
+
+# The Python driver runs once. Each solver wrapper sets its own thread budget.
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OMP_THREAD_LIMIT=1
+export OPENBLAS_NUM_THREADS=1 BLIS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+export OMP_MAX_ACTIVE_LEVELS=1 OMP_DYNAMIC=FALSE MKL_DYNAMIC=FALSE
+export OMP_PROC_BIND=FALSE
+unset OMP_PLACES MKL_DOMAIN_NUM_THREADS KMP_AFFINITY GOMP_CPU_AFFINITY
+# Capture the MPICH launcher immediately after module loading; later PATH changes
+# must not select the Intel-Python bundled mpirun.
+export EDMFT_MPIEXEC="${EDMFT_MPIEXEC:-$(command -v mpiexec)}"
+[[ $EDMFT_MPIEXEC == /* && -x $EDMFT_MPIEXEC ]] || { echo "Invalid EDMFT_MPIEXEC" >&2; exit 2; }
+export NORG_THREADS_PER_RANK="${SLURM_CPUS_PER_TASK:?}"
+# Keep the existing 64 lattice data partitions across two nodes.
+export DMFT_MPI_RANKS=64
+# sbatch may spool the script elsewhere: use the submission/work directory.
+export EDMFT_MPI_WRAPPER="${EDMFT_MPI_WRAPPER:-${SLURM_SUBMIT_DIR:-$PWD}/run_solver_mpi.sh}"
+[[ -x $EDMFT_MPI_WRAPPER ]] || { echo "Missing wrapper: $EDMFT_MPI_WRAPPER" >&2; exit 2; }
+# Two-node MPICH/UCX: shared memory locally and InfiniBand between nodes.
+export UCX_TLS=self,sm,rc
+export FI_PROVIDER=verbs
+export UCX_NET_DEVICES=mlx5_0:1
+
+# ===== EDMFT Python3 环境 =====
+export WIEN_DMFT_ROOT=/gpfs/home/ychen/edmftnorg/edmftnorgtest/eDMFT-master-python3/bin
+export WIENROOT=/gpfs/home/ychen/tools/WIEN2K
+
+# 强制 python3
+export PYTHON="${EDMFT_PYTHON:-/gpfs/apps/intel/2022/oneapi/intelpython/latest/bin/python3.9}"
+[[ -x $PYTHON ]] || { echo "Missing Python: $PYTHON" >&2; exit 2; }
+
+# 默认 STEP，如果没有传入，则 “init”
+STEP=${STEP:-init}
+
+# Check lattice executables before Python can continue after a failed launch.
+case "$STEP" in
+  run_dmft*|xdmft1|lapw1lapwsoxdmft1)
+    /bin/bash "$(dirname -- "$EDMFT_MPI_WRAPPER")/solver_runtime.sh" --check \
+        "$WIEN_DMFT_ROOT/dmft" "$WIEN_DMFT_ROOT/dmft2" || exit $?
+    ;;
+esac
+
+case "$STEP" in
+  run_lapw)
+    run_lapw -p
+    ;;
+  run_lapwso)
+    run_lapw -so -p
+    ;;    
+  localaxes)
+    $PYTHON $WIEN_DMFT_ROOT/localaxes.py
+    ;; 
+  szeroNLX)
+    $PYTHON $WIEN_DMFT_ROOT/szero.py -N 200 -L 25 -x 0.05
+    ;;
+  szero)
+    $PYTHON $WIEN_DMFT_ROOT/szero.py 
+    ;;
+  lapw1lapwsoxdmft1)
+    $PYTHON $WIEN_DMFT_ROOT/x_dmft.py lapw1
+    $PYTHON $WIEN_DMFT_ROOT/x_dmft.py lapwso
+    $PYTHON $WIEN_DMFT_ROOT/x_dmft.py dmft1
+    ;; 
+  xdmft1)
+    $PYTHON $WIEN_DMFT_ROOT/x_dmft.py dmft1
+    ;; 
+  run_dmft|run_dmft_new|run_dmft_new_fese_diagonal_paramagnetism)
+    "$PYTHON" "$WIEN_DMFT_ROOT/run_dmft_new_fese_diagonal_paramagnetism.py" > nohup.dat 2>&1
+    ;;
+  findRot)
+    $PYTHON $WIEN_DMFT_ROOT/findRot.py
+    ;;
+  *)
+    echo "Unknown STEP=$STEP."
+    exit 1
+    ;;
+esac
+
