@@ -46,7 +46,7 @@ Supports 2, 3, or 5 orbitals.
 | --- | --- | --- |
 | `solver` | `'NORG'` | Selects the NORG impurity solver. |
 | `DCs` | `'exact'` | Selects the double-counting correction scheme. |
-| `max_dmft_iterations` | `50` | Maximum number of DMFT iterations per outer cycle. |
+| `max_dmft_iterations` | `1` | Maximum number of DMFT iterations per outer cycle. |
 | `max_lda_iterations` | `100` | Maximum number of LDA charge iterations per outer cycle. |
 | `finish` | `200` | Maximum number of outer charge self-consistency cycles. |
 | `ntail` | `300` | Number of high-frequency tail sampling points on the self-energy mesh. |
